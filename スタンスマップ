@@ -1,0 +1,380 @@
+import { useMemo } from "react";
+import {
+	Card,
+	CardBody,
+	CardHeader,
+	H1,
+	H2,
+	Pill,
+	Row,
+	Stack,
+	Swatch,
+	Table,
+	Text,
+	useCanvasState,
+	useHostTheme,
+} from "cursor/canvas";
+
+type TopicId = "1" | "2a" | "2b" | "3";
+
+type CountryPoint = {
+	name: string;
+	code: string;
+	region: string;
+	block: string;
+	stances: Record<TopicId, number>;
+	labels: Record<TopicId, string>;
+};
+
+const COUNTRIES: CountryPoint[] = [
+	{ name: "Burkina Faso", code: "BFA", region: "非洲", block: "G77 / AU", stances: { "1": 1, "2a": 2, "2b": 2, "3": 1 }, labels: { "1": "政策目標", "2a": "不可分", "2b": "不可分", "3": "拒否" } },
+	{ name: "Ghana", code: "GHA", region: "非洲", block: "AU / G77", stances: { "1": 2, "2a": 2, "2b": 2, "3": 2 }, labels: { "1": "普遍的人権", "2a": "不可分", "2b": "不可分", "3": "中庸" } },
+	{ name: "Nigeria", code: "NGA", region: "非洲", block: "G77 / OIC", stances: { "1": 1, "2a": 1, "2b": 1, "3": 1 }, labels: { "1": "政策目標", "2a": "劣後", "2b": "劣後", "3": "拒否" } },
+	{ name: "Malawi", code: "MWI", region: "非洲", block: "G77 / LDC", stances: { "1": 1, "2a": 2, "2b": 2, "3": 1 }, labels: { "1": "政策目標", "2a": "不可分", "2b": "不可分", "3": "拒否" } },
+	{ name: "Egypt", code: "EGY", region: "非洲", block: "OIC / G77", stances: { "1": 1, "2a": 1, "2b": 1, "3": 1 }, labels: { "1": "政策目標", "2a": "劣後", "2b": "劣後", "3": "拒否" } },
+	{ name: "DR Congo", code: "COD", region: "非洲", block: "G77 / AU", stances: { "1": 1, "2a": 1, "2b": 2, "3": 1 }, labels: { "1": "政策目標", "2a": "劣後", "2b": "不可分", "3": "拒否" } },
+	{ name: "Japan", code: "JPN", region: "アジア", block: "OECD", stances: { "1": 2, "2a": 2, "2b": 2, "3": 2 }, labels: { "1": "普遍的人権", "2a": "不可分", "2b": "不可分", "3": "中庸" } },
+	{ name: "Iran", code: "IRN", region: "アジア", block: "OIC / G77", stances: { "1": 1, "2a": 1, "2b": 1, "3": 1 }, labels: { "1": "政策目標", "2a": "劣後", "2b": "劣後", "3": "拒否" } },
+	{ name: "Pakistan", code: "PAK", region: "アジア", block: "OIC / G77", stances: { "1": 1, "2a": 1, "2b": 1, "3": 1 }, labels: { "1": "政策目標", "2a": "劣後", "2b": "劣後", "3": "拒否" } },
+	{ name: "Bangladesh", code: "BGD", region: "アジア", block: "G77 / OIC", stances: { "1": 1, "2a": 2, "2b": 2, "3": 2 }, labels: { "1": "政策目標", "2a": "不可分", "2b": "不可分", "3": "中庸" } },
+	{ name: "Brazil", code: "BRA", region: "南米", block: "G77 / BRICS", stances: { "1": 2, "2a": 2, "2b": 2, "3": 2 }, labels: { "1": "普遍的人権", "2a": "不可分", "2b": "不可分", "3": "中庸" } },
+	{ name: "Colombia", code: "COL", region: "南米", block: "進歩派", stances: { "1": 2, "2a": 2, "2b": 3, "3": 2 }, labels: { "1": "普遍的人権", "2a": "不可分", "2b": "優越", "3": "中庸" } },
+	{ name: "Paraguay", code: "PRY", region: "南米", block: "G77", stances: { "1": 1, "2a": 1, "2b": 1, "3": 1 }, labels: { "1": "政策目標", "2a": "劣後", "2b": "劣後", "3": "拒否" } },
+	{ name: "Guatemala", code: "GTM", region: "中美", block: "G77", stances: { "1": 1, "2a": 2, "2b": 2, "3": 1 }, labels: { "1": "政策目標", "2a": "不可分", "2b": "不可分", "3": "拒否" } },
+	{ name: "the United Kingdom", code: "GBR", region: "欧州", block: "OECD / EU", stances: { "1": 2, "2a": 3, "2b": 3, "3": 3 }, labels: { "1": "普遍的人権", "2a": "優越", "2b": "優越", "3": "容認" } },
+	{ name: "Norway", code: "NOR", region: "欧州", block: "Nordic", stances: { "1": 2, "2a": 3, "2b": 3, "3": 3 }, labels: { "1": "普遍的人権", "2a": "優越", "2b": "優越", "3": "容認" } },
+	{ name: "Spain", code: "ESP", region: "欧州", block: "EU / OECD", stances: { "1": 2, "2a": 2, "2b": 2, "3": 2 }, labels: { "1": "普遍的人権", "2a": "不可分", "2b": "不可分", "3": "中庸" } },
+	{ name: "Germany", code: "DEU", region: "欧州", block: "EU / OECD", stances: { "1": 2, "2a": 2, "2b": 2, "3": 3 }, labels: { "1": "普遍的人権", "2a": "不可分", "2b": "不可分", "3": "容認" } },
+	{ name: "Russian Federation", code: "RUS", region: "欧州", block: "—", stances: { "1": 1, "2a": 1, "2b": 1, "3": 1 }, labels: { "1": "政策目標", "2a": "劣後", "2b": "劣後", "3": "拒否" } },
+	{ name: "Bosnia and Herzegovina", code: "BIH", region: "欧州", block: "EU候補", stances: { "1": 2, "2a": 2, "2b": 2, "3": 2 }, labels: { "1": "普遍的人権", "2a": "不可分", "2b": "不可分", "3": "中庸" } },
+];
+
+const PLOT = {
+	left: 100,
+	top: 48,
+	width: 520,
+	height: 420,
+};
+
+const PLOT_RIGHT = PLOT.left + PLOT.width;
+const PLOT_BOTTOM = PLOT.top + PLOT.height;
+const CX = PLOT.left + PLOT.width / 2;
+const CY = PLOT.top + PLOT.height / 2;
+
+type RegionStyle = { fill: string; stroke: string };
+
+type CategoryColors = {
+	gray: string;
+	purple: string;
+	green: string;
+	yellow: string;
+	cyan: string;
+	pink: string;
+	blue: string;
+	orange: string;
+};
+
+function regionStyle(region: string, category: CategoryColors): RegionStyle {
+	switch (region) {
+		case "非洲":
+			return { fill: category.yellow, stroke: category.orange };
+		case "アジア":
+			return { fill: category.green, stroke: category.yellow };
+		case "南米":
+			return { fill: category.green, stroke: category.cyan };
+		case "中美":
+			return { fill: category.yellow, stroke: category.green };
+		case "欧州":
+			return { fill: category.cyan, stroke: category.purple };
+		default:
+			return { fill: category.gray, stroke: category.gray };
+	}
+}
+
+function hashOffset(name: string): { dx: number; dy: number } {
+	let h = 0;
+	for (let i = 0; i < name.length; i += 1) {
+		h = (h * 31 + name.charCodeAt(i)) % 997;
+	}
+	return {
+		dx: ((h % 17) - 8) * 1.4,
+		dy: (((h / 17) | 0) % 17 - 8) * 1.4,
+	};
+}
+
+function computePoint(c: CountryPoint) {
+	const xRaw = c.stances["1"] === 2 ? 18 : 82;
+	const yRaw = ((c.stances["2a"] - 1) / 2) * 100;
+	const { dx, dy } = hashOffset(c.name);
+	const x = Math.min(94, Math.max(6, xRaw + dx));
+	const y = Math.min(94, Math.max(6, yRaw + dy));
+	return {
+		x: PLOT.left + (x / 100) * PLOT.width,
+		y: PLOT.top + (y / 100) * PLOT.height,
+		xPct: x,
+		yPct: y,
+	};
+}
+
+function QuadrantChart({
+	selectedCode,
+	onSelect,
+}: {
+	selectedCode: string | null;
+	onSelect: (code: string | null) => void;
+}) {
+	const theme = useHostTheme();
+	const category = theme.category as CategoryColors;
+
+	const points = useMemo(
+		() =>
+			COUNTRIES.map((c) => ({
+				country: c,
+				...computePoint(c),
+				style: regionStyle(c.region, category),
+			})),
+		[category],
+	);
+
+	const gridStroke = theme.stroke.secondary;
+	const axisStroke = theme.stroke.primary;
+	const labelColor = theme.text.secondary;
+	const faintColor = theme.text.tertiary;
+	const bgFill = theme.bg.editor;
+
+	return (
+		<svg
+			viewBox="0 0 720 560"
+			width="100%"
+			style={{ maxWidth: 720, display: "block" }}
+			role="img"
+			aria-label="CSW61 20カ国 四象限スタンスマップ"
+		>
+			<rect x={0} y={0} width={720} height={560} fill={bgFill} />
+
+			<text
+				x={360}
+				y={24}
+				textAnchor="middle"
+				fill={theme.text.primary}
+				fontSize={13}
+				fontWeight={600}
+			>
+				CSW61 参加20カ国 — スタンス四象限マップ
+			</text>
+
+			<text
+				x={36}
+				y={CY}
+				textAnchor="middle"
+				fill={labelColor}
+				fontSize={11}
+				transform={`rotate(-90 36 ${CY})`}
+			>
+				発展の権利要求 強 ← | → 弱
+			</text>
+			<text x={36} y={PLOT.top + 8} textAnchor="middle" fill={labelColor} fontSize={11}>
+				強
+			</text>
+			<text x={36} y={CY + 4} textAnchor="middle" fill={labelColor} fontSize={11}>
+				中
+			</text>
+			<text x={36} y={PLOT_BOTTOM - 4} textAnchor="middle" fill={labelColor} fontSize={11}>
+				弱
+			</text>
+
+			<text
+				x={360}
+				y={PLOT_BOTTOM + 36}
+				textAnchor="middle"
+				fill={labelColor}
+				fontSize={12}
+				fontWeight={500}
+			>
+				普遍的人権 ←→ 政策目標
+			</text>
+			<text x={PLOT.left} y={PLOT_BOTTOM + 18} textAnchor="start" fill={labelColor} fontSize={11}>
+				← 普遍的人権
+			</text>
+			<text x={PLOT_RIGHT} y={PLOT_BOTTOM + 18} textAnchor="end" fill={labelColor} fontSize={11}>
+				政策目標 →
+			</text>
+
+			<rect
+				x={PLOT.left}
+				y={PLOT.top}
+				width={PLOT.width}
+				height={PLOT.height}
+				fill={theme.fill.tertiary}
+				stroke={gridStroke}
+			/>
+
+			<line x1={CX} y1={PLOT.top} x2={CX} y2={PLOT_BOTTOM} stroke={axisStroke} strokeWidth={1} />
+			<line x1={PLOT.left} y1={CY} x2={PLOT_RIGHT} y2={CY} stroke={axisStroke} strokeWidth={1} />
+
+			<text x={PLOT.left + 8} y={PLOT.top + 18} fill={faintColor} fontSize={10}>
+				普遍的人権＋発展要求強
+			</text>
+			<text x={PLOT_RIGHT - 8} y={PLOT.top + 18} textAnchor="end" fill={faintColor} fontSize={10}>
+				政策目標＋発展要求強
+			</text>
+			<text x={PLOT.left + 8} y={PLOT_BOTTOM - 8} fill={faintColor} fontSize={10}>
+				普遍的人権＋発展要求弱
+			</text>
+			<text x={PLOT_RIGHT - 8} y={PLOT_BOTTOM - 8} textAnchor="end" fill={faintColor} fontSize={10}>
+				政策目標＋発展要求弱
+			</text>
+
+			{points.map(({ country, x, y, style }) => {
+				const active = selectedCode === country.code;
+				const r = active ? 30 : 26;
+				return (
+					<g
+						key={country.code}
+						style={{ cursor: "pointer" }}
+						onClick={() => onSelect(active ? null : country.code)}
+					>
+						<circle
+							cx={x}
+							cy={y}
+							r={r}
+							fill={style.fill}
+							fillOpacity={active ? 0.95 : 0.82}
+							stroke={style.stroke}
+							strokeWidth={active ? 3.5 : 2.5}
+						/>
+						<text
+							x={x}
+							y={y + 4}
+							textAnchor="middle"
+							fill={theme.text.primary}
+							fontSize={country.code.length > 3 ? 9 : 11}
+							fontWeight={700}
+						>
+							{country.code}
+						</text>
+					</g>
+				);
+			})}
+
+			<text x={360} y={548} textAnchor="middle" fill={faintColor} fontSize={9}>
+				Source: 立場マトリクス.md · 横軸=論点1（二項） · 縦軸=論点2a · CSW61（2017年3月）
+			</text>
+		</svg>
+	);
+}
+
+function SelectedCountryDetail({ code }: { code: string }) {
+	const country = COUNTRIES.find((c) => c.code === code);
+	if (!country) return null;
+
+	return (
+		<Card>
+			<CardHeader trailing={<Pill tone="info">{country.region}</Pill>}>
+				{country.name}（{country.code}）
+			</CardHeader>
+			<CardBody>
+				<Stack gap={8}>
+					<Text size="small" tone="secondary">
+						主要ブロック：{country.block}
+					</Text>
+					<Table
+						headers={["論点", "スタンス"]}
+						rows={[
+							["論点1（普遍的人権 vs 政策目標）", country.labels["1"]],
+							["論点2a（発展の権利）", country.labels["2a"]],
+							["論点2b（文化・宗教）", country.labels["2b"]],
+							["論点3（コンディショナリティ）", country.labels["3"]],
+						]}
+						framed={false}
+					/>
+				</Stack>
+			</CardBody>
+		</Card>
+	);
+}
+
+export default function Csw61QuadrantMap() {
+	const theme = useHostTheme();
+	const [selectedCode, setSelectedCode] = useCanvasState<string | null>("selected", null);
+
+	return (
+		<Stack gap={16} style={{ padding: 16, maxWidth: 760 }}>
+			<Stack gap={4}>
+				<H1>CSW61 四象限スタンスマップ</H1>
+				<Text tone="secondary">
+					参考形式の2軸散布図。20カ国の会場位置を一目で把握できます。
+				</Text>
+			</Stack>
+
+			<Card>
+				<CardBody>
+					<QuadrantChart selectedCode={selectedCode} onSelect={setSelectedCode} />
+				</CardBody>
+			</Card>
+
+			<Row gap={16} wrap>
+				<Row gap={6} align="center">
+					<svg width={14} height={14}>
+						<circle cx={7} cy={7} r={6} fill={theme.category.yellow} stroke={theme.category.orange} strokeWidth={2} />
+					</svg>
+					<Text size="small">非洲</Text>
+				</Row>
+				<Row gap={6} align="center">
+					<svg width={14} height={14}>
+						<circle cx={7} cy={7} r={6} fill={theme.category.green} stroke={theme.category.yellow} strokeWidth={2} />
+					</svg>
+					<Text size="small">アジア</Text>
+				</Row>
+				<Row gap={6} align="center">
+					<svg width={14} height={14}>
+						<circle cx={7} cy={7} r={6} fill={theme.category.green} stroke={theme.category.cyan} strokeWidth={2} />
+					</svg>
+					<Text size="small">南米</Text>
+				</Row>
+				<Row gap={6} align="center">
+					<svg width={14} height={14}>
+						<circle cx={7} cy={7} r={6} fill={theme.category.yellow} stroke={theme.category.green} strokeWidth={2} />
+					</svg>
+					<Text size="small">中美</Text>
+				</Row>
+				<Row gap={6} align="center">
+					<svg width={14} height={14}>
+						<circle cx={7} cy={7} r={6} fill={theme.category.cyan} stroke={theme.category.purple} strokeWidth={2} />
+					</svg>
+					<Text size="small">欧州</Text>
+				</Row>
+			</Row>
+
+			{selectedCode ? (
+				<SelectedCountryDetail code={selectedCode} />
+			) : (
+				<Text size="small" tone="tertiary">
+					円をクリックすると国別スタンスの詳細が表示されます。
+				</Text>
+			)}
+
+			<Stack gap={6}>
+				<H2>軸の読み方</H2>
+				<Table
+					headers={["軸", "左 / 上", "右 / 下", "根拠データ"]}
+					rows={[
+						[
+							"横軸（X）",
+							"普遍的人権",
+							"政策目標",
+							"論点1（二項対立のみ）",
+						],
+						[
+							"縦軸（Y）",
+							"発展の権利要求 強",
+							"発展の権利要求 弱",
+							"論点2a（発展の権利との優劣）",
+						],
+					]}
+					striped
+				/>
+			</Stack>
+		</Stack>
+	);
+}
